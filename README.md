@@ -1,5 +1,7 @@
 # Automation Framework
 
+[![CI](https://github.com/TpppT/autoscene/actions/workflows/ci.yml/badge.svg)](https://github.com/TpppT/autoscene/actions/workflows/ci.yml)
+
 A YAML-driven UI automation framework for building end-to-end test flows across browsers, desktop apps, emulators, embedded systems, and mobile devices with OCR, object detection, log validation, and image-based value checks.
 
 The main entry point is `run_tests.py`. At runtime, it loads a YAML case, builds the runtime resources, and executes the scenario in five stages:
