@@ -18,6 +18,7 @@ After the latest runtime update, `verification_setup` is now a first-class stage
 - Support emulator integration, log validation, and image-based reader validation
 - Support failure artifacts, retries, continue-on-failure behavior, and debug screenshots
 - Support extension points for vision algorithms and runtime plugins
+- Support reusing the vision pipeline as a standalone module that can be integrated into other automation testing frameworks
 
 ## Demo GIFs
 
@@ -387,6 +388,8 @@ Notes:
 ## Vision Pipeline
 
 When `detector.type: pipeline`, you can compose multiple vision stages into a single detector. The built-in stage kinds are:
+
+The vision pipeline is not limited to this YAML runner. You can also split it out and embed it into other automation frameworks when you only need the OCR, detection, classification, or image-analysis pipeline.
 
 - `detector_region`
 - `detector_refinement`
