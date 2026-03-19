@@ -1,0 +1,28 @@
+@startuml
+title Automation Framework - Module Call Flow: emulator
+
+skinparam shadowing false
+autonumber
+
+actor "RuntimeProfileResolver /\nActionDispatcher" as Caller
+participant "create_emulator()" as CreateEmulator
+participant "build_emulator_registry()" as BuildRegistry
+participant "install_emulator_plugins()" as InstallPlugins
+participant "EmulatorRegistry.create()" as RegistryCreate
+participant "_invoke_factory()" as InvokeFactory
+participant "Null /\nNetworkDevice /\nQtDriveCluster adapter" as Adapter
+
+Caller -> CreateEmulator : create_emulator(config, plugins?)
+alt plugins provided
+  CreateEmulator -> BuildRegistry : clone default registry
+  BuildRegistry -> InstallPlugins : install scoped plugin registrations
+  BuildRegistry --> CreateEmulator : plugin-aware registry
+end
+CreateEmulator -> RegistryCreate : create(config)
+RegistryCreate -> InvokeFactory : call adapter factory
+InvokeFactory -> Adapter : instantiate adapter
+CreateEmulator --> Caller : EmulatorAdapter
+
+Caller -> Adapter : launch()/stop()/execute()/send()
+
+@enduml

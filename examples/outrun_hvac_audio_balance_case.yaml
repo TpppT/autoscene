@@ -1,0 +1,63 @@
+name: outrun_hvac_audio_balance_reposition
+
+detector:
+  type: pipeline
+  stages:
+    - type: detector_region
+      detector:
+        type: yolo
+        model_path: models/yolo/audio_balance_detect.pt
+        confidence: 0.4
+        inference_region:
+          x1: 448
+          y1: 0
+          x2: 1280
+          y2: 720
+
+ocr:
+  type: mock
+
+capture:
+  window_title: Outrun HVAC
+
+setup:
+  - action: activate_window
+    window_title: Outrun HVAC
+    timeout: 5
+    interval: 0.2
+  - action: sleep
+    seconds: 0.5
+  - action: screenshot
+    filename: outrun_hvac_before_audio_balance_drag.png
+
+steps:
+  - action: drag_object_to_position
+    locate:
+      label: pink_point
+      min_score: 0.3
+      pick: highest_score
+      region:
+        x1: 640
+        y1: 0
+        x2: 1280
+        y2: 720
+    # target_x / target_y are in capture coordinates inside the Outrun HVAC window.
+    target_x: 980
+    target_y: 430
+    duration_ms: 700
+    debug_filename: audio_balance_detect_before_drag.png
+  - action: sleep
+    seconds: 0.8
+  - action: screenshot
+    filename: outrun_hvac_after_audio_balance_drag.png
+
+verification:
+  - check: object_exists
+    locate:
+      label: pink_point
+      min_score: 0.3
+      region:
+        x1: 900
+        y1: 340
+        x2: 1080
+        y2: 520

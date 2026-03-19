@@ -1,0 +1,35 @@
+@startuml
+title Automation Framework - Module: imaging
+
+left to right direction
+skinparam shadowing false
+skinparam componentStyle rectangle
+skinparam packageStyle rectangle
+
+package "imaging" {
+  component "opencv/base.py\nOpenCVAdapterBase" as AdapterBase
+  component "_path_image_cache()" as Cache
+  component "require_cv2() /\nrequire_numpy() /\nrequire_pillow()" as DependencyGuards
+  component "to_ndarray() /\nclip_region() /\npreprocess()" as Operations
+}
+
+package "Primary Consumers" {
+  component "vision.detectors" as Detectors
+  component "vision.ocr" as OCR
+  component "vision.opencv\nmatchers / readers /\ncomparators" as OpenCVVision
+}
+
+AdapterBase --> Cache
+AdapterBase --> DependencyGuards
+AdapterBase --> Operations
+Detectors --> AdapterBase
+OCR --> AdapterBase
+OpenCVVision --> AdapterBase
+
+note bottom of AdapterBase
+  The imaging module is a shared technical utility layer.
+  It centralizes OpenCV dependency checks, image coercion,
+  path caching, cropping, and preprocessing.
+end note
+
+@enduml

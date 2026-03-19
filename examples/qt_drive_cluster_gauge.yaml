@@ -1,0 +1,135 @@
+name: qt_drive_cluster_gauge_flow
+
+emulator:
+  type: qt_drive_cluster
+  base_url: http://127.0.0.1:8765
+  state_defaults:
+    demo_mode: false
+    mode_index: 1
+    menu: 1
+
+readers:
+  cluster_gauges:
+    type: opencv_qt_cluster_static
+
+detector:
+  type: pipeline
+  stages:
+    - type: detector_region
+      detector:
+        type: mock
+
+ocr:
+  type: mock
+
+capture:
+  window_title: Instrument Cluster Demo
+
+setup:
+  - action: emulator_launch
+  - action: activate_window
+    window_title: Instrument Cluster Demo
+    timeout: 2
+  - action: emulator_command
+    command: demo_stop
+
+steps:
+  - action: emulator_send
+    payload:
+      speed: 60
+      rpm: 3200
+      gear: d
+      temp: 85
+  - action: sleep
+    seconds: 1
+  - action: emulator_command
+    command: state
+  - action: screenshot
+    filename: qt_cluster_state_1.png
+  - check: reader_value_in_range
+    reader: cluster_gauges
+    query: speed
+    image_path: outputs/qt_cluster_state_1.png
+    expected: 60
+    tolerance: 12
+    min_score: 0.2
+  - check: reader_value_in_range
+    reader: cluster_gauges
+    query: rpm
+    image_path: outputs/qt_cluster_state_1.png
+    expected: 3200
+    tolerance: 350
+    min_score: 0.2
+  - check: reader_value_in_range
+    reader: cluster_gauges
+    query: temp
+    image_path: outputs/qt_cluster_state_1.png
+    expected: 85
+    tolerance: 12
+    min_score: 0.2
+  - action: emulator_send
+    payload:
+      speed: 126
+      rpm: 4200
+      gear: m2
+      temp: 95
+  - action: sleep
+    seconds: 1
+  - action: emulator_command
+    command: state
+  - action: screenshot
+    filename: qt_cluster_state_2.png
+  - check: reader_value_in_range
+    reader: cluster_gauges
+    query: speed
+    image_path: outputs/qt_cluster_state_2.png
+    expected: 126
+    tolerance: 12
+    min_score: 0.2
+  - check: reader_value_in_range
+    reader: cluster_gauges
+    query: rpm
+    image_path: outputs/qt_cluster_state_2.png
+    expected: 4200
+    tolerance: 350
+    min_score: 0.2
+  - check: reader_value_in_range
+    reader: cluster_gauges
+    query: temp
+    image_path: outputs/qt_cluster_state_2.png
+    expected: 95
+    tolerance: 12
+    min_score: 0.2
+  - action: emulator_send
+    payload:
+      speed: 80
+      rpm: 2500
+      gear: d
+      temp: 70
+  - action: sleep
+    seconds: 1
+  - action: emulator_command
+    command: state
+  - action: screenshot
+    filename: qt_cluster_state_3.png
+  - check: reader_value_in_range
+    reader: cluster_gauges
+    query: speed
+    image_path: outputs/qt_cluster_state_3.png
+    expected: 80
+    tolerance: 12
+    min_score: 0.2
+  - check: reader_value_in_range
+    reader: cluster_gauges
+    query: rpm
+    image_path: outputs/qt_cluster_state_3.png
+    expected: 2500
+    tolerance: 350
+    min_score: 0.2
+  - check: reader_value_in_range
+    reader: cluster_gauges
+    query: temp
+    image_path: outputs/qt_cluster_state_3.png
+    expected: 70
+    tolerance: 12
+    min_score: 0.2

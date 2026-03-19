@@ -1,0 +1,143 @@
+name: teststore_hummingbird_quantity_three
+
+emulator:
+  type: none
+
+detector:
+  type: pipeline
+  stages:
+    - type: detector_region
+      detector: &teststore_omniparser
+        type: omniparser
+        model_path: models/omniparser/icon_detect.pt
+        templates_dir: models/icon_templates
+        confidence: 0.05
+        iou_threshold: 0.1
+        template_match_threshold: 0.3
+
+detectors:
+  icons: *teststore_omniparser
+
+ocr:
+  type: tesseract
+  lang: eng
+  min_confidence: 40
+  tesseract_cmd: 'C:\Program Files\Tesseract-OCR\tesseract.exe'
+
+capture:
+  type: window
+  window_title: Google Chrome
+
+setup:
+  - action: open_browser
+    browser: chrome
+    args:
+      - --guest
+    # If Chrome is not on PATH, set browser_path explicitly.
+    # browser_path: C:\Program Files\Google\Chrome\Application\chrome.exe
+    url: https://teststore.automationtesting.co.uk/index.php
+    wait_seconds: 5
+  - action: maximize_window
+    window_title: Google Chrome
+    timeout: 10
+    interval: 0.5
+  - action: activate_window
+    window_title: Google Chrome
+    timeout: 5
+    interval: 0.5
+    settle_seconds: 0.5
+  - action: screenshot
+    filename: teststore_home.png
+
+steps:
+  - action: click_text
+    locate:
+      text: Hummingbird printed sweater
+    retry_count: 1
+    retry_interval_seconds: 1.0
+    debug_filename: hummingbird_printed_sweater_match.png
+    debug_crop_filename: hummingbird_printed_sweater_crop.png
+  - action: sleep
+    seconds: 1
+  - action: screenshot
+    filename: product_detail.png
+  - check: object_exists
+    locate:
+      label: quantity_up
+      detector: icons
+      min_score: 0.3
+      region:
+        x1: 960
+        y1: 560
+        x2: 1060
+        y2: 640
+  - action: click_object
+    locate:
+      label: quantity_up
+      detector: icons
+      min_score: 0.3
+      pick: topmost
+      region:
+        x1: 960
+        y1: 560
+        x2: 1060
+        y2: 640
+    retry_count: 1
+    retry_interval_seconds: 0.5
+    debug_filename: quantity_up_match_1.png
+  - action: click_object
+    locate:
+      label: quantity_up
+      detector: icons
+      min_score: 0.3
+      pick: topmost
+      region:
+        x1: 960
+        y1: 560
+        x2: 1060
+        y2: 640
+    retry_count: 1
+    retry_interval_seconds: 0.5
+    debug_filename: quantity_up_match_2.png
+  - action: sleep
+    seconds: 1
+  - check: object_exists
+    locate:
+      label: add_to_cart
+      detector: icons
+      min_score: 0.5
+      region:
+        x1: 1000
+        y1: 560
+        x2: 1260
+        y2: 650
+  - action: click_object
+    locate:
+      label: add_to_cart
+      detector: icons
+      min_score: 0.5
+      region:
+        x1: 1000
+        y1: 560
+        x2: 1260
+        y2: 650
+    retry_count: 1
+    retry_interval_seconds: 0.5
+    debug_filename: add_to_cart_match.png
+  - action: sleep
+    seconds: 1
+  - action: screenshot
+    filename: add_to_cart_modal.png
+
+verification:
+  - check: wait_for_text
+    locate:
+      text: Quantity
+    timeout: 10
+    interval: 0.5
+  - check: text_exists
+    locate:
+      text: "3"
+      exact: true
+
+teardown: []

@@ -1,0 +1,35 @@
+@startuml
+title Automation Framework - Module: emulator
+
+left to right direction
+skinparam shadowing false
+skinparam componentStyle rectangle
+skinparam packageStyle rectangle
+
+package "emulator" {
+  component "base.py\nEmulatorAdapter" as Base
+  component "null.py\nNullEmulatorAdapter" as Null
+  component "network_device.py\nNetworkDeviceEmulatorAdapter" as Network
+  component "qt_drive_cluster.py\nQtDriveClusterEmulatorAdapter" as QtCluster
+  component "registry.py\nEmulatorRegistry /\nScopedEmulatorRegistry" as Registry
+}
+
+package "Primary Consumers" {
+  component "runner.action_dispatcher" as Dispatcher
+  component "runner.runtime_profile_resolver" as ProfileResolver
+}
+
+Registry --> Base : factory contract
+Registry --> Null
+Registry --> Network
+Registry --> QtCluster
+ProfileResolver --> Registry : create_emulator()
+Dispatcher --> Base : launch / stop /\nexecute / send
+
+note bottom of Registry
+  The emulator module exposes a plugin-aware factory
+  registry so runtime profiles can swap real device,
+  network, cluster, or null adapters.
+end note
+
+@enduml

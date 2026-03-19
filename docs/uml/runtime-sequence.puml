@@ -1,0 +1,140 @@
+@startuml
+title Automation Framework - Runtime Execution Sequence
+
+autonumber
+skinparam shadowing false
+
+actor "Test Engineer" as User
+participant "run_tests.py" as CLI
+participant "yamlcase.loader" as Loader
+participant "RuntimeProfileResolver" as ProfileResolver
+participant "TestExecutor" as Executor
+participant "RuntimeBuilder\n(thin facade)" as Builder
+participant "ScenarioRunnerFactory" as RunnerFactory
+participant "ScenarioPlanCompiler" as PlanCompiler
+participant "StepCompiler" as StepCompiler
+participant "Spec Registry" as SpecRegistry
+participant "RuntimeFactoryResolver" as FactoryResolver
+participant "RuntimeResourceFactory" as ResourceFactory
+participant "RuntimeServiceFactory" as ServiceFactory
+participant "RuntimeContextFactory" as ContextFactory
+participant "Runtime Factories" as Factories
+participant "Policies\nHookBus / Retry / Failure" as Policies
+participant "ActionRegistry\n(from ActionDispatcher)" as ActionRegistry
+participant "CheckRegistry\n(from CheckDispatcher)" as CheckRegistry
+participant "ScenarioRunner" as Runner
+participant "RunSessionLifecycle" as SessionLifecycle
+participant "ScenarioPipeline" as Pipeline
+participant "StageRunner" as StageRunner
+participant "StepExecutor" as StepExecutor
+participant "StageStepOperation /\nVerificationStepOperation" as StepOperation
+participant "ActionDispatcher" as ActionDispatcher
+participant "CheckDispatcher" as CheckDispatcher
+participant "ActionServices /\nLocateActions" as ActionServices
+participant "Capture" as Capture
+participant "Detector / OCR / Reader" as Vision
+participant "EmulatorAdapter" as Emulator
+participant "LogSource" as LogSource
+participant "ArtifactStore" as ArtifactStore
+
+User -> CLI : python run_tests.py case.yaml
+CLI -> Loader : load_test_case(path)
+Loader -> Loader : validate setup / steps /\nverification / teardown
+Loader --> CLI : TestCase
+
+CLI -> ProfileResolver : resolve(profile_override?)
+ProfileResolver --> CLI : resolved RuntimeProfile\n(defaults + plugin-aware factories)
+CLI -> Executor : TestExecutor(case, resolved_profile, output_dir)
+Executor -> Builder : compile(case, profile)
+Builder -> PlanCompiler : compile(case, profile)
+loop stage items
+  PlanCompiler -> StepCompiler : compile_stage_item() /\ncompile_verification_item()
+  StepCompiler -> SpecRegistry : build_registered_*_args()
+end
+PlanCompiler --> Builder : ScenarioPlan
+Builder --> Executor : ScenarioPlan
+Executor -> Builder : build(profile, case)
+Builder -> ContextFactory : build(profile, case, output_dir)
+ContextFactory -> FactoryResolver : resolve(profile)
+FactoryResolver --> ContextFactory : RuntimeFactorySet
+ContextFactory -> ResourceFactory : build(case, factories)
+ResourceFactory -> Factories : create emulator / detector /\nOCR / readers / log sources /\ncapture / actions
+Factories --> ResourceFactory : runtime resources
+ResourceFactory --> ContextFactory : RuntimeResources
+ContextFactory -> ServiceFactory : build(profile, factories,\nresources, logger, output_path)
+ServiceFactory -> ActionDispatcher : create dispatcher
+ServiceFactory -> CheckDispatcher : create dispatcher
+ServiceFactory -> Policies : resolve hook bus /\nartifact store / retry /\nfailure policy
+ServiceFactory --> ContextFactory : RuntimeServices
+ContextFactory --> Builder : RuntimeContext
+Builder --> Executor : RuntimeContext
+Executor -> RunnerFactory : create(profile, runner?)
+RunnerFactory --> Executor : ScenarioRunner
+
+CLI -> Executor : run()
+Executor -> Runner : run(plan, context)
+Runner -> SessionLifecycle : start(context)
+SessionLifecycle --> Runner : RunSession
+
+loop each stage
+  Runner -> Pipeline : run stage items
+  Pipeline -> StageRunner : run(stage)
+
+  loop each step
+    StageRunner -> StepExecutor : execute(...)
+    StepExecutor -> Policies : emit before_step /\nrun retry wrapper
+    StepExecutor -> StepOperation : execute(stage policy)
+
+    alt action step
+      StepOperation -> ActionRegistry : dispatch_step(step)
+      ActionRegistry -> ActionDispatcher : invoke built-in /\nplugin handler
+
+      alt primitive UI action
+        ActionDispatcher -> ActionServices : base_actions.click/drag/\ninput/press_key/...
+      else locate-driven action
+        ActionDispatcher -> ActionServices : locate_actions.*
+        ActionServices -> Capture : capture_active_frame()
+        ActionServices -> Vision : detector / OCR locate pipeline
+        Vision --> ActionServices : matched box / text
+        ActionServices --> ActionDispatcher : mapped screen coordinates
+      else emulator action
+        ActionDispatcher -> Emulator : launch / execute / send / stop
+      end
+
+    else check step
+      StepOperation -> CheckRegistry : dispatch_step(step)
+      CheckRegistry -> CheckDispatcher : invoke built-in /\nplugin handler
+
+      alt UI text/object check
+        CheckDispatcher -> ActionServices : verify_* / wait_for_text
+        ActionServices -> Capture : capture_active_frame()
+        ActionServices -> Vision : OCR / detector lookup
+      else reader check
+        CheckDispatcher -> Capture : screenshot() if image_path missing
+        CheckDispatcher -> Vision : ReaderAdapter.read(...)
+      else log check
+        CheckDispatcher -> LogSource : read_text()
+      end
+
+      CheckDispatcher --> StepExecutor : bool result
+    end
+
+    alt step failed
+      StepExecutor -> Policies : handle_step_failure(...)
+      Policies -> ArtifactStore : record_step_failure(...)
+      ArtifactStore --> Policies : artifact path / write error
+      Policies --> StepExecutor : StepResult or re-raise
+    end
+  end
+end
+
+alt case failed
+  Runner -> SessionLifecycle : fail(context, session, error)
+else case finished
+  Runner -> SessionLifecycle : finish(context, session)
+end
+
+Runner --> Executor : RunSession
+Executor --> CLI : final status / failure
+
+@enduml

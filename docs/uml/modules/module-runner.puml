@@ -1,0 +1,69 @@
+@startuml
+title Automation Framework - Module: runner
+
+left to right direction
+skinparam shadowing false
+skinparam componentStyle rectangle
+skinparam packageStyle rectangle
+
+package "runner" {
+  component "executor.py\nTestExecutor" as Executor
+  component "runtime_profile_resolver.py\nRuntimeProfileResolver" as ProfileResolver
+  component "runtime.py\nRuntimeBuilder facade" as RuntimeFacade
+  component "runtime_compile.py\nScenarioPlanCompiler /\nStepCompiler" as Compile
+  component "step_specs.py +\nspec_registry.py" as StepSpecs
+  component "runtime_assembly.py\nRuntimeFactoryResolver /\nRuntimeResourceFactory /\nRuntimeServiceFactory /\nRuntimeContextFactory" as Assembly
+  component "runtime_execution.py\nScenarioRunner /\nScenarioPipeline /\nStageRunner /\nStepExecutor" as Execution
+  component "runtime_models.py +\nruntime_events.py +\nruntime_policies.py" as RuntimeContracts
+  component "action_dispatcher.py +\ncheck_dispatcher.py" as Dispatchers
+  component "registry.py + checks/*" as RuntimeRegistry
+}
+
+package "External Modules" {
+  component "core" as Core
+  component "actions" as Actions
+  component "capture" as Capture
+  component "emulator" as Emulator
+  component "logs" as Logs
+  component "vision" as Vision
+}
+
+Executor --> RuntimeFacade
+ProfileResolver --> Emulator
+ProfileResolver --> Capture
+ProfileResolver --> Logs
+ProfileResolver --> Vision
+ProfileResolver --> Actions
+RuntimeFacade --> Compile
+Compile --> StepSpecs
+Compile --> Core
+RuntimeFacade --> Assembly
+Assembly --> RuntimeContracts
+Assembly --> Dispatchers
+Assembly --> Actions
+Assembly --> Vision
+Assembly --> Logs
+Assembly --> Emulator
+Assembly --> Capture
+Execution --> RuntimeContracts
+Execution --> Dispatchers
+Dispatchers --> RuntimeRegistry
+Dispatchers --> Actions
+Dispatchers --> Logs
+Dispatchers --> Vision
+
+note bottom of RuntimeFacade
+  The runner module now separates:
+  - profile resolution
+  - plan compilation
+  - runtime assembly
+  - execution and policy handling
+end note
+
+note bottom of Execution
+  Step execution is staged through setup, steps,
+  verification, and teardown. Retry, failure, and
+  hook events are normalized in shared policy helpers.
+end note
+
+@enduml

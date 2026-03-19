@@ -1,0 +1,139 @@
+@startuml
+title Automation Framework - Runtime Assembly Responsibilities
+
+left to right direction
+skinparam shadowing false
+skinparam componentStyle rectangle
+skinparam packageStyle rectangle
+
+component "RuntimeBuilder\nthin facade" as Builder
+component "RuntimeProfileResolver" as ProfileResolver
+component "RuntimeContextFactory" as ContextFactory
+component "RuntimeFactoryResolver" as FactoryResolver
+component "RuntimeResourceFactory" as ResourceFactory
+component "RuntimeServiceFactory" as ServiceFactory
+component "invoke_factory()" as InvokeFactory
+
+package "Input Contracts" {
+  component "RuntimeProfile\n(user override)" as RuntimeProfile
+  component "RuntimeProfile\n(resolved)" as ResolvedProfile
+  component "TestCase" as TestCase
+}
+
+package "Resolved Factories" {
+  component "RuntimeFactorySet" as RuntimeFactorySet
+}
+
+package "Resource Construction" {
+  component "Emulator" as Emulator
+  component "Detector + Detectors" as Detectors
+  component "ReaderAdapters" as Readers
+  component "LogSources" as LogSources
+  component "OCR Engine" as Ocr
+  component "Capture" as Capture
+  component "ActionServices" as ActionServices
+  component "RuntimeActionBindings" as ActionBindings
+  component "RuntimeResources" as RuntimeResources
+}
+
+package "Service Construction" {
+  component "ActionDispatcher" as ActionDispatcher
+  component "CheckDispatcher" as CheckDispatcher
+  component "HookBus" as HookBus
+  component "ArtifactStore" as ArtifactStore
+  component "RunnerRetryPolicy" as RetryPolicy
+  component "FailurePolicy" as FailurePolicy
+  component "Registry Plugin Install" as RegistryPlugins
+  component "RuntimeServices" as RuntimeServices
+}
+
+package "Final Context" {
+  component "RuntimeMetadata" as RuntimeMetadata
+  component "RuntimeContext" as RuntimeContext
+}
+
+ProfileResolver --> RuntimeProfile
+ProfileResolver --> ResolvedProfile : fill defaults /\nbind plugin-aware factories
+
+Builder --> ContextFactory : build(resolved_profile, case, output_dir)
+ContextFactory --> FactoryResolver : resolve(profile)
+FactoryResolver --> ResolvedProfile
+FactoryResolver --> RuntimeFactorySet
+
+ContextFactory --> ResourceFactory : build(case, factories)
+ResourceFactory --> TestCase
+ResourceFactory --> RuntimeFactorySet
+ResourceFactory --> Emulator
+ResourceFactory --> Detectors
+ResourceFactory --> Readers
+ResourceFactory --> LogSources
+ResourceFactory --> Ocr
+ResourceFactory --> Capture
+ResourceFactory --> ActionServices
+ResourceFactory --> ActionBindings : extract base /\nlocate / screenshot
+ResourceFactory --> RuntimeResources
+
+ContextFactory --> ServiceFactory : build(profile, factories,\nresources, logger, output_path)
+ServiceFactory --> ResolvedProfile
+ServiceFactory --> RuntimeFactorySet
+ServiceFactory --> RuntimeResources
+ServiceFactory --> InvokeFactory
+ServiceFactory --> ActionDispatcher
+ServiceFactory --> CheckDispatcher
+ServiceFactory --> HookBus
+ServiceFactory --> ArtifactStore
+ServiceFactory --> RetryPolicy
+ServiceFactory --> FailurePolicy
+ServiceFactory --> RegistryPlugins : install runtime plugins
+ServiceFactory --> RuntimeServices
+
+ContextFactory --> RuntimeMetadata
+ContextFactory --> RuntimeContext
+RuntimeContext *-- RuntimeMetadata
+RuntimeContext *-- RuntimeResources
+RuntimeContext *-- RuntimeServices
+
+note bottom of ContextFactory
+  RuntimeContextFactory now coordinates assembly,
+  but does not directly own:
+  - required factory validation
+  - named resource construction
+  - policy / service resolution
+  - signature-based factory invocation
+end note
+
+note bottom of ProfileResolver
+  This step happens before TestExecutor.
+  Defaults are selected once through:
+  - _resolve_factory()
+  - _factory_accepts_plugins()
+  The executor receives a profile that is
+  already executable.
+end note
+
+note right of FactoryResolver
+  Required runtime factories are checked
+  through the shared _REQUIRED_FACTORY_FIELDS
+  declaration instead of repeated inline guards.
+end note
+
+note bottom of ResourceFactory
+  Shared helper _build_named_resources()
+  now creates detectors / readers / log sources
+  with one consistent construction path.
+end note
+
+note bottom of ServiceFactory
+  Shared helpers normalize:
+  - _resolve_profile_component()
+  - _resolve_registry()
+  - runtime registry plugin installation
+end note
+
+note bottom of InvokeFactory
+  Shared helper:
+  passes only supported keyword args
+  to user-supplied factories.
+end note
+
+@enduml

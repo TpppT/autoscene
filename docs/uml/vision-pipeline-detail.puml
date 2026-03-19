@@ -1,0 +1,144 @@
+@startuml
+title Automation Framework - Vision Pipeline Detailed UML
+
+left to right direction
+skinparam shadowing false
+skinparam componentStyle rectangle
+skinparam packageStyle rectangle
+
+package "Factory Entry" {
+  component "VisionRegistryBundle" as Bundle
+  component "create_detector()\ncreate_ocr_engine()\ncreate_reader_adapter()" as PublicFactories
+  component "VisionPipelineDetector" as PipelineDetector
+  component "_resolve_pipeline_builders()" as ResolveBuilders
+  component "build_vision_pipeline()" as BuildPipeline
+}
+
+package "Stage Build Layer" {
+  component "VisionStageRegistry" as StageRegistry
+  component "VisionStageBuildContext" as BuildContext
+  component "_coerce_pipeline_stages()" as CoercePipelineStages
+  component "_coerce_stage()" as CoerceStage
+  component "_build_stage_context()" as BuildStageContext
+  component "Built-in Stage Builders" as StageBuilders
+  component "ScopedVisionStageRegistry" as ScopedStageRegistry
+}
+
+package "Runtime Core" {
+  component "VisionPipeline" as Pipeline
+  component "VisionPipelineContext" as PipelineContext
+  component "VisionPipelineResult" as PipelineResult
+  component "VisionPipelineStage.execute()" as StageExecute
+  component "VisionPipelineStage.run()" as StageRun
+  component "VisionNode /\nVisionNodeTraceEntry" as Nodes
+}
+
+package "Available Built-in Stages" {
+  component "DetectorRegionStage" as DetectorRegionStage
+  component "DetectorRefinementStage" as DetectorRefinementStage
+  component "MatcherClassificationStage" as MatcherClassificationStage
+  component "OCRClassificationStage" as OCRClassificationStage
+  component "TextLocateStage" as TextLocateStage
+  component "ReaderClassificationStage" as ReaderClassificationStage
+  component "NodeFilterStage" as NodeFilterStage
+  component "ComparatorFilterStage" as ComparatorFilterStage
+  component "OperatorStage" as OperatorStage
+}
+
+package "Query Helpers" as QueryHelpers {
+  component "run_object_locate_pipeline()" as ObjectLocateQuery
+  component "filter_object_locate_nodes()" as FilterObjectNodes
+  component "run_text_locate_pipeline()" as TextLocateQuery
+  component "ObjectLocatePipelineResult" as ObjectLocateResult
+  component "TextLocatePipelineResult" as TextLocateResult
+}
+
+package "Vision Backends" {
+  component "Detector" as Detector
+  component "OCREngine" as OCREngine
+  component "MatcherAdapter" as MatcherAdapter
+  component "ReaderAdapter" as ReaderAdapter
+  component "ComparatorAdapter" as ComparatorAdapter
+  component "VisionOperator" as VisionOperator
+}
+
+PublicFactories --> Bundle : resolve_vision_registry_bundle()
+Bundle --> PipelineDetector : detector type = pipeline
+PipelineDetector --> ResolveBuilders : resolve bundle factories
+ResolveBuilders --> Bundle : detector / OCR / matcher /\nreader / comparator /\noperator / stage registry
+PipelineDetector --> BuildPipeline : build configured stage list
+BuildPipeline --> CoercePipelineStages : coerce ordered stages
+CoercePipelineStages --> CoerceStage : mapping -> stage instance
+CoerceStage --> StageRegistry : resolve/create builder
+CoerceStage --> BuildStageContext : build stage context
+BuildStageContext --> BuildContext
+StageRegistry --> StageBuilders : registered aliases + builders
+ScopedStageRegistry --> StageRegistry : plugin stage registration
+
+StageBuilders --> DetectorRegionStage
+StageBuilders --> DetectorRefinementStage
+StageBuilders --> MatcherClassificationStage
+StageBuilders --> OCRClassificationStage
+StageBuilders --> TextLocateStage
+StageBuilders --> ReaderClassificationStage
+StageBuilders --> NodeFilterStage
+StageBuilders --> ComparatorFilterStage
+StageBuilders --> OperatorStage
+
+DetectorRegionStage --> Detector
+DetectorRefinementStage --> Detector
+MatcherClassificationStage --> MatcherAdapter
+OCRClassificationStage --> OCREngine
+TextLocateStage --> OCREngine
+ReaderClassificationStage --> ReaderAdapter
+ComparatorFilterStage --> ComparatorAdapter
+OperatorStage --> VisionOperator
+
+PipelineDetector *-- Pipeline
+Pipeline --> StageExecute : for each stage
+StageExecute --> StageRun : subclass logic
+StageExecute --> Nodes : append node trace
+StageExecute --> PipelineContext : record stage
+Pipeline --> PipelineContext : allowed labels /\nmetadata /\ntrace
+Pipeline --> PipelineResult : nodes + trace
+PipelineResult --> Nodes : boxes projection
+
+ObjectLocateQuery --> DetectorRegionStage
+ObjectLocateQuery --> NodeFilterStage
+ObjectLocateQuery --> PipelineContext
+ObjectLocateQuery --> ObjectLocateResult
+
+FilterObjectNodes --> NodeFilterStage
+FilterObjectNodes --> PipelineContext
+FilterObjectNodes --> ObjectLocateResult
+
+TextLocateQuery --> TextLocateStage
+TextLocateQuery --> PipelineContext
+TextLocateQuery --> TextLocateResult
+
+note bottom of ResolveBuilders
+  VisionPipelineDetector first resolves the
+  effective backend factories from an explicit
+  argument list or from the registry bundle.
+end note
+
+note bottom of CoerceStage
+  A stage config mapping is converted through:
+  1. resolve_vision_stage_registry()
+  2. _build_stage_context()
+  3. VisionStageRegistry.create()
+end note
+
+note bottom of StageExecute
+  execute() wraps every stage's run() method.
+  It records per-stage trace metadata and appends
+  node trace entries before returning new nodes.
+end note
+
+note bottom of QueryHelpers
+  The query helpers bypass full pipeline assembly
+  and directly compose a small subset of stages
+  for locate-specific workflows.
+end note
+
+@enduml

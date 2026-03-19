@@ -1,0 +1,42 @@
+@startuml
+title Automation Framework - Module Call Flow: vision
+
+skinparam shadowing false
+autonumber
+
+actor "actions / runner" as Caller
+participant "create_detector() /\ncreate_ocr_engine() /\ncreate_reader_adapter()" as PublicFactory
+participant "resolve_vision_registry_bundle()" as ResolveBundle
+participant "build_vision_registry_bundle()" as BuildBundle
+participant "install_vision_plugins()" as InstallPlugins
+participant "VisionRegistryBundle.create_*()" as BundleCreate
+participant "DetectorRegistry /\nOCRRegistry /\nReaderRegistry.create()" as RegistryCreate
+participant "_invoke_factory()" as InvokeFactory
+participant "VisionPipelineDetector" as PipelineDetector
+participant "build_vision_pipeline()" as BuildPipeline
+participant "_resolve_pipeline_builders() /\n_coerce_pipeline_stages()" as CoerceStages
+participant "VisionStageRegistry.create()" as StageRegistry
+participant "run_text_locate_pipeline() /\nrun_object_locate_pipeline()" as QueryPipeline
+
+Caller -> PublicFactory : create_*(config, plugins?, registry_bundle?)
+PublicFactory -> ResolveBundle : resolve or clone bundle
+alt no bundle yet
+  ResolveBundle -> BuildBundle : build default bundle
+  BuildBundle -> InstallPlugins : install vision plugins
+end
+PublicFactory -> BundleCreate : create detector / OCR / reader / matcher / operator
+BundleCreate -> RegistryCreate : create(config)
+RegistryCreate -> InvokeFactory : invoke backend factory
+InvokeFactory --> Caller : backend instance
+
+alt detector type = pipeline
+  RegistryCreate -> PipelineDetector : VisionPipelineDetector(...)
+  PipelineDetector -> BuildPipeline : build_vision_pipeline(stages)
+  BuildPipeline -> CoerceStages : resolve bundle builders + coerce stage configs
+  CoerceStages -> StageRegistry : create configured stages
+end
+
+Caller -> QueryPipeline : run_text_locate_pipeline() /\nrun_object_locate_pipeline()
+QueryPipeline --> Caller : locate result + nodes + trace
+
+@enduml

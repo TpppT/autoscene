@@ -1,0 +1,168 @@
+@startuml
+title Automation Framework - System Overview
+
+left to right direction
+skinparam shadowing false
+skinparam componentStyle rectangle
+skinparam packageStyle rectangle
+
+actor "Test Engineer" as User
+artifact "examples/*.yaml" as CaseYaml
+folder "models/" as Models
+folder "outputs/" as Outputs
+node "System Under Test\nbrowser / desktop window /\ndevice / video stream" as SUT
+
+package "Entry And Case Model" {
+  component "run_tests.py" as CLI
+  component "yamlcase.loader" as Loader
+  component "TestCase" as TestCase
+  component "RuntimeProfileResolver" as ProfileResolver
+}
+
+package "Runner Runtime Facade" {
+  component "TestExecutor" as Executor
+  component "RuntimeBuilder\nthin facade" as Builder
+  component "ScenarioRunnerFactory" as RunnerFactory
+}
+
+package "Runner Compilation" {
+  component "ScenarioPlanCompiler" as PlanCompiler
+  component "StepCompiler" as StepCompiler
+  component "Spec Registry\nbuild_registered_*_args()" as SpecRegistry
+  component "runtime_models\nStep / ScenarioPlan" as PlanModels
+}
+
+package "Runner Assembly" {
+  component "RuntimeFactoryResolver" as FactoryResolver
+  component "RuntimeResourceFactory" as ResourceFactory
+  component "RuntimeServiceFactory" as ServiceFactory
+  component "RuntimeContextFactory" as ContextFactory
+  component "runtime_models\nRuntimeContext / Metadata /\nResources / Services" as ContextModels
+  component "runtime_policies\nHookBus / RunnerRetryPolicy /\nFailurePolicy / ArtifactStore" as RuntimePolicies
+}
+
+package "Runner Execution" {
+  component "ScenarioRunner" as Runner
+  component "RunSessionLifecycle" as SessionLifecycle
+  component "ScenarioPipeline\nsetup -> steps -> verification -> teardown" as Pipeline
+  component "StageDefinition[]" as StageDefinitions
+  component "StageRunner" as StageRunner
+  component "StepExecutor" as StepExecutor
+  component "StageStepOperation /\nVerificationStepOperation" as StepOperation
+}
+
+package "Dispatch Layer" {
+  component "ActionDispatcher\n+ ActionRegistry" as ActionDispatcher
+  component "CheckDispatcher\n+ CheckRegistry" as CheckDispatcher
+}
+
+package "Action Layer" {
+  component "ActionServices" as ActionServices
+  component "BaseActions" as BaseActions
+  component "LocateActions" as LocateActions
+  component "ActionVisionRuntime" as ActionVisionRuntime
+}
+
+package "Resource Factories And Adapters" {
+  component "EmulatorRegistry\ncreate_emulator()" as EmulatorRegistry
+  component "EmulatorAdapter" as Emulator
+  component "VisionRegistryBundle\n+ scoped plugin registries" as VisionRegistry
+  component "Detector / OCR / Reader /\nPipelineDetector" as VisionBackends
+  component "LogSourceRegistry\ncreate_log_source()" as LogRegistry
+  component "LogSource" as LogSource
+  component "Capture\nWindowCapture | VideoStreamCapture" as Capture
+}
+
+User --> CLI : run case
+CaseYaml --> Loader : parse YAML
+CLI --> Loader : load_test_case()
+Loader --> TestCase : validate steps
+CLI --> ProfileResolver : resolve(profile overrides)
+CLI --> Executor : build + run with resolved profile
+
+Executor --> Builder : compile() / build()
+ProfileResolver --> Executor : resolved RuntimeProfile
+Executor --> RunnerFactory : create runner
+RunnerFactory --> Runner
+Executor --> Runner : run(plan, context)
+Builder --> PlanCompiler : compile()
+Builder --> ContextFactory : build()
+
+PlanCompiler --> StepCompiler
+StepCompiler --> SpecRegistry : action/check args
+PlanCompiler --> PlanModels : create ScenarioPlan
+
+ContextFactory --> FactoryResolver : resolve required factories
+ContextFactory --> ResourceFactory : build resources
+ContextFactory --> ServiceFactory : build services
+ContextFactory --> ContextModels : create RuntimeContext
+ResourceFactory --> EmulatorRegistry
+ResourceFactory --> VisionRegistry
+ResourceFactory --> LogRegistry
+ResourceFactory --> Capture
+ServiceFactory --> RuntimePolicies : create policies
+ServiceFactory --> ActionDispatcher
+ServiceFactory --> CheckDispatcher
+
+EmulatorRegistry --> Emulator
+VisionRegistry --> VisionBackends
+LogRegistry --> LogSource
+VisionBackends --> Models : load weights / templates
+
+Runner --> Pipeline
+Runner --> SessionLifecycle : start / finish / fail session
+Pipeline --> StageDefinitions : default stage config
+Pipeline --> StageRunner : run stage
+StageRunner --> StepExecutor
+StepExecutor --> StepOperation : delegate by stage policy
+StepOperation --> ActionDispatcher : action step
+StepOperation --> CheckDispatcher : check step
+StepExecutor --> RuntimePolicies : hook / retry / failure
+RuntimePolicies --> Outputs : persist failure JSON
+
+ActionDispatcher --> ActionServices
+ActionDispatcher --> Emulator : launch / send / execute
+CheckDispatcher --> LocateActions : UI checks
+CheckDispatcher --> BaseActions : screenshot checks
+CheckDispatcher --> VisionBackends : reader checks
+CheckDispatcher --> LogSource : log checks
+
+ActionServices --> BaseActions
+ActionServices --> LocateActions
+ActionServices --> ActionVisionRuntime
+LocateActions --> ActionVisionRuntime : OCR / detector locate
+BaseActions --> Capture : capture frame / map coords
+ActionVisionRuntime --> VisionBackends
+
+BaseActions --> SUT : click / drag / key / browser
+Capture --> SUT : grab image
+Emulator --> SUT : commands / payloads
+LogSource --> SUT : file / command logs
+
+note bottom of StepExecutor
+  A run is split into four stages:
+  setup, steps, verification, teardown.
+  Each stage can execute actions and checks.
+end note
+
+note bottom of Builder
+  RuntimeBuilder is intentionally thin now:
+  - plan compilation lives in runtime_compile.py
+  - runtime assembly lives in runtime_assembly.py
+  - execution flow lives in runtime_execution.py
+end note
+
+note bottom of ProfileResolver
+  RuntimeProfileResolver normalizes defaults
+  and binds plugin-aware factories once
+  before TestExecutor is constructed.
+end note
+
+note bottom of RuntimePolicies
+  Shared helpers now normalize:
+  - retry attempt payloads
+  - failure result construction
+  - artifact metadata updates
+end note
+
+@enduml

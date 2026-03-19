@@ -1,0 +1,47 @@
+name: mock_runtime_smoke
+
+emulator:
+  type: none
+
+detector:
+  type: mock
+  fixtures:
+    - label: smoke_badge
+      x1: 36
+      y1: 40
+      x2: 164
+      y2: 120
+      score: 0.99
+
+ocr:
+  type: mock
+  fixtures:
+    - text: AutoScene Smoke
+      x1: 42
+      y1: 160
+      x2: 286
+      y2: 204
+      score: 0.98
+
+capture:
+  type: static_image
+  path: examples/assets/smoke_scene.png
+
+setup:
+  - action: screenshot
+    filename: mock_frame.png
+
+steps:
+  - check: wait_for_text
+    locate:
+      text: AutoScene Smoke
+    timeout: 0.2
+    interval: 0.05
+
+verification:
+  - check: text_exists
+    locate:
+      text: AutoScene Smoke
+  - check: object_exists
+    locate:
+      label: smoke_badge

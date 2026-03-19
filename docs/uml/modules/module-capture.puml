@@ -1,0 +1,38 @@
+@startuml
+title Automation Framework - Module: capture
+
+left to right direction
+skinparam shadowing false
+skinparam componentStyle rectangle
+skinparam packageStyle rectangle
+
+package "capture" {
+  component "window_capture.py\nWindowCapture /\nWindowLocator /\nCaptureResult" as WindowCapture
+  component "video_stream_capture.py\nVideoStreamCapture + factory" as VideoCapture
+}
+
+package "Dependencies" {
+  component "platform adapters /\nPIL / mss / pygetwindow /\ncv2 helpers" as Platform
+  component "core.exceptions" as Core
+}
+
+package "Primary Consumers" {
+  component "actions.base /\nactions.advanced" as Actions
+  component "runner.runtime_profile_resolver" as ProfileResolver
+}
+
+WindowCapture --> Platform
+WindowCapture --> Core
+VideoCapture --> WindowCapture : shared region /\nresult types
+VideoCapture --> Core
+Actions --> WindowCapture
+ProfileResolver --> WindowCapture
+ProfileResolver --> VideoCapture
+
+note bottom of WindowCapture
+  The capture module abstracts screenshots from
+  windows, desktop regions, and video streams
+  behind a compatible result model.
+end note
+
+@enduml

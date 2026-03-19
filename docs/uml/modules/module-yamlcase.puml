@@ -1,0 +1,37 @@
+@startuml
+title Automation Framework - Module: yamlcase
+
+left to right direction
+skinparam shadowing false
+skinparam componentStyle rectangle
+skinparam packageStyle rectangle
+
+actor "Test Engineer" as User
+artifact "case.yaml" as CaseYaml
+
+package "yamlcase" {
+  component "loader.py\nload_test_case()" as Loader
+  component "_ensure_* helpers" as Guards
+  component "_validate_stage_items()" as Validator
+}
+
+package "Dependencies" {
+  component "PyYAML\nsafe_load()" as YamlLib
+  component "core.models.TestCase" as TestCase
+  component "runner.spec_registry\nbuild_registered_*_args()" as SpecRegistry
+}
+
+User --> CaseYaml
+CaseYaml --> Loader : parse
+Loader --> YamlLib : safe_load()
+Loader --> Guards : normalize mappings /\nlists /\nnamed maps
+Loader --> Validator : validate setup / steps /\nverification / teardown
+Validator --> SpecRegistry : validate action/check args
+Loader --> TestCase : build case model
+
+note bottom of Validator
+  yamlcase validates the scenario shape early,
+  before runtime compilation begins.
+end note
+
+@enduml

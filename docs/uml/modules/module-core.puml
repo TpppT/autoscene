@@ -1,0 +1,43 @@
+@startuml
+title Automation Framework - Module: core
+
+left to right direction
+skinparam shadowing false
+skinparam componentStyle rectangle
+skinparam packageStyle rectangle
+
+package "core" {
+  component "models.py\nTestCase / BoundingBox /\nOCRText / locate specs" as Models
+  component "exceptions.py\nDependencyMissingError /\nActionExecutionError /\nVerificationError" as Exceptions
+}
+
+package "Primary Consumers" {
+  component "yamlcase.loader" as Loader
+  component "actions/*" as Actions
+  component "capture/*" as Capture
+  component "runner/*" as Runner
+  component "vision/*" as Vision
+}
+
+Loader --> Models
+Loader --> Exceptions
+Actions --> Models
+Actions --> Exceptions
+Capture --> Exceptions
+Runner --> Models
+Runner --> Exceptions
+Vision --> Models
+Vision --> Exceptions
+
+note bottom of Models
+  The core module is the shared contract layer.
+  It keeps the reusable data models that the
+  rest of the framework exchanges at runtime.
+end note
+
+note bottom of Exceptions
+  Shared exception types keep action, verification,
+  dependency, and IO failures consistent across modules.
+end note
+
+@enduml

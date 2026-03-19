@@ -1,0 +1,49 @@
+@startuml
+title Automation Framework - Module Call Flow: actions
+
+skinparam shadowing false
+autonumber
+
+actor "runner dispatcher" as Runner
+participant "ActionServices.__init__()" as ActionServices
+participant "BaseActions" as BaseActions
+participant "ActionVisionRuntime" as VisionRuntime
+participant "TextActions" as TextActions
+participant "ObjectActions" as ObjectActions
+participant "LocateActions" as LocateActions
+participant "capture_active_frame()" as CaptureActiveFrame
+participant "WindowCapture.capture_result()" as Capture
+participant "run_text_locate_pipeline()" as TextPipeline
+participant "run_object_locate_pipeline()" as ObjectPipeline
+participant "pyautogui" as PyAutoGUI
+
+Runner -> ActionServices : compose action layer
+ActionServices -> BaseActions : BaseActions(capture)
+ActionServices -> VisionRuntime : detector + OCR + detectors
+ActionServices -> TextActions : wire dependencies
+ActionServices -> ObjectActions : wire dependencies
+ActionServices -> LocateActions : compose text/object actions
+
+alt primitive UI action
+  Runner -> BaseActions : click()/drag()/input_text()/press_key()/screenshot()
+  BaseActions -> Capture : capture_frame()/screenshot()
+  BaseActions -> PyAutoGUI : click()/moveTo()/press()/write()
+else text locate action
+  Runner -> LocateActions : click_text()/click_relative_to_text()/wait_for_text()
+  LocateActions -> TextActions : delegate
+  TextActions -> CaptureActiveFrame : capture_active_frame(base_actions)
+  CaptureActiveFrame -> BaseActions : capture_frame()
+  BaseActions -> Capture : capture_result()
+  TextActions -> VisionRuntime : read_ocr()
+  TextActions -> TextPipeline : locate text region
+  TextActions -> BaseActions : capture_to_screen() /\nclick()
+else object locate action
+  Runner -> LocateActions : click_object()/drag_object_to_*
+  LocateActions -> ObjectActions : delegate
+  ObjectActions -> CaptureActiveFrame : capture current frame
+  ObjectActions -> VisionRuntime : resolve_detector()
+  ObjectActions -> ObjectPipeline : locate object region
+  ObjectActions -> BaseActions : capture_to_screen() /\nclick()/drag()
+end
+
+@enduml

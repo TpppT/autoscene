@@ -1,0 +1,55 @@
+name: external_device_event_flow
+
+emulator:
+  type: network_device
+  base_url: http://127.0.0.1:8080
+  default_endpoint: /api/device/events
+  timeout_seconds: 8
+  default_headers:
+    X-Device-Source: testcase
+
+detector:
+  type: pipeline
+  stages:
+    - type: detector_region
+      detector:
+        type: yolo
+        model_path: models/ui_yolo.pt
+        confidence: 0.3
+
+ocr:
+  type: tesseract
+  lang: eng
+  min_confidence: 45
+
+capture:
+  window_title: Your GUI Window Title
+
+setup:
+  - action: emulator_send
+    payload:
+      device_id: meter-1001
+      event_type: startup
+      status: online
+
+steps:
+  - action: emulator_send
+    payload:
+      device_id: meter-1001
+      event_type: measurement
+      value: 42.7
+      unit: C
+  - action: sleep
+    seconds: 1.5
+  - action: screenshot
+    filename: after_device_event.png
+
+verification:
+  - check: wait_for_text
+    locate:
+      text: meter-1001
+    timeout: 10
+    interval: 0.5
+  - check: text_exists
+    locate:
+      text: 42.7

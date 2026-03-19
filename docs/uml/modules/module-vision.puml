@@ -1,0 +1,57 @@
+@startuml
+title Automation Framework - Module: vision
+
+left to right direction
+skinparam shadowing false
+skinparam componentStyle rectangle
+skinparam packageStyle rectangle
+
+package "vision" {
+  component "interfaces.py + models.py\nDetector / OCREngine /\nMatcher / Reader / nodes" as Contracts
+  component "registry.py\nVisionRegistryBundle /\nscoped plugin registries /\nbinding table" as Registry
+  component "detectors/*" as Detectors
+  component "ocr/*" as OcrEngines
+  component "opencv/*\nmatchers / readers /\ncomparators" as OpenCVAdapters
+  component "omni/*" as Omni
+  component "pipeline/*\ncore / registry / runtime /\nstages / query / utils" as Pipeline
+}
+
+package "Dependencies" {
+  component "core.models /\ncore.exceptions" as Core
+  component "imaging.OpenCVAdapterBase" as Imaging
+}
+
+package "Primary Consumers" {
+  component "actions.vision_runtime /\nactions.advanced" as Actions
+  component "runner.checks.ui" as RunnerChecks
+  component "runner.runtime_profile_resolver" as ProfileResolver
+}
+
+Registry --> Detectors
+Registry --> OcrEngines
+Registry --> OpenCVAdapters
+Registry --> Omni
+Registry --> Pipeline
+Detectors --> Contracts
+Detectors --> Core
+Detectors --> Imaging
+OcrEngines --> Contracts
+OcrEngines --> Core
+OcrEngines --> Imaging
+OpenCVAdapters --> Contracts
+OpenCVAdapters --> Core
+OpenCVAdapters --> Imaging
+Pipeline --> Contracts
+Pipeline --> Core
+Actions --> Registry : create detector / OCR
+RunnerChecks --> Contracts : ReaderAdapter
+ProfileResolver --> Registry : bind plugin-aware factories
+
+note bottom of Pipeline
+  The pipeline submodule turns configured stages into
+  a reusable detection and OCR workflow. The runtime
+  now resolves registry-bundle factories together
+  before coercing stage configurations.
+end note
+
+@enduml

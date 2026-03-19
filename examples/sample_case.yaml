@@ -1,0 +1,42 @@
+name: sample_ui_smoke
+
+emulator:
+  type: none
+
+detector:
+  type: pipeline
+  stages:
+    - type: detector_region
+      detector:
+        type: yolo
+        model_path: models/ui_yolo.pt
+        confidence: 0.3
+
+ocr:
+  type: tesseract
+  lang: eng
+  min_confidence: 45
+
+capture:
+  window_title: Your GUI Window Title
+
+setup:
+  - action: activate_window
+    window_title: Your GUI Window Title
+    timeout: 2
+
+steps:
+  - action: screenshot
+    filename: sample_before.png
+  - action: click_text
+    locate:
+      text: Settings
+  - action: sleep
+    seconds: 0.5
+
+verification:
+  - check: wait_for_text
+    locate:
+      text: Settings
+    timeout: 5
+    interval: 0.5

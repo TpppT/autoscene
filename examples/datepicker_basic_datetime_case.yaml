@@ -1,0 +1,101 @@
+name: datepicker_basic_datetime
+
+detector:
+  type: pipeline
+  stages:
+    - type: detector_region
+      detector:
+        type: mock
+
+ocr:
+  type: tesseract
+  lang: eng
+  min_confidence: 40
+  tesseract_cmd: 'C:\Program Files\Tesseract-OCR\tesseract.exe'
+  tesseract_config: "--psm 6"
+  preprocess:
+    enabled: true
+    scale: 3.0
+    clahe_clip_limit: 3.0
+    threshold: adaptive_gaussian
+    adaptive_block_size: 31
+    adaptive_c: 11
+
+capture:
+  window_title: Google Chrome
+
+setup:
+  - action: open_browser
+    browser: chrome
+    args:
+      - --guest
+    url: https://www.automationtesting.co.uk/datepicker.html
+    wait_seconds: 3
+  - action: maximize_window
+    window_title: Google Chrome
+    timeout: 10
+    interval: 0.5
+  - action: sleep
+    seconds: 1
+  - action: screenshot
+    filename: datepicker_home.png
+
+steps:
+  - action: click_text
+    locate:
+      text: Please select Date Time
+  - action: sleep
+    seconds: 0.5
+  - action: click_text
+    locate:
+      text: "2026"
+      exact: true
+      ocr:
+        tesseract_config: "--psm 11"
+        preprocess:
+          clahe_clip_limit: 2.0
+          threshold: none
+  - action: press_key
+    key: backspace
+    presses: 4
+  - action: input_text
+    text: "2027"
+  - action: sleep
+    seconds: 0.5
+  - action: click_text
+    locate:
+      text: "20"
+      exact: true
+      ocr:
+        tesseract_config: "--psm 11"
+        preprocess:
+          clahe_clip_limit: 2.0
+          threshold: none
+  - action: sleep
+    seconds: 0.7
+  - action: input_text
+    text: "15"
+  - action: press_key
+    key: tab
+  - action: input_text
+    text: "30"
+  - action: activate_window
+    window_title: Google Chrome
+    timeout: 5
+    interval: 0.5
+  - action: sleep
+    seconds: 1
+  - action: screenshot
+    filename: basic_datetime_filled.png
+
+verification:
+  - check: text_exists
+    locate:
+      text: Basic DateTime
+      exact: true
+  - check: text_exists
+    locate:
+      text: "March, 20 2027"
+  - check: text_exists
+    locate:
+      text: "15:30"

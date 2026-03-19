@@ -1,0 +1,54 @@
+@startuml
+title Automation Framework - Module: actions
+
+left to right direction
+skinparam shadowing false
+skinparam componentStyle rectangle
+skinparam packageStyle rectangle
+
+package "actions" {
+  component "browser.py\nbrowser helpers" as Browser
+  component "base.py\nBaseActions +\nBrowserActionsMixin" as BaseActions
+  component "vision_runtime.py\nActionVisionRuntime" as VisionRuntime
+  component "service_resolution.py\nruntime-facing service protocols" as Resolution
+  component "services.py\nActionServices" as Services
+}
+
+package "actions.advanced" {
+  component "TextActions" as TextActions
+  component "ObjectActions" as ObjectActions
+  component "LocateActions" as LocateActions
+  component "DebugArtifactWriter /\nRetryPolicy /\nshared capture helpers" as AdvancedSupport
+}
+
+package "Dependencies" {
+  component "capture.WindowCapture" as Capture
+  component "vision Detector / OCR /\npipeline queries" as Vision
+  component "core models /\nexceptions" as Core
+}
+
+BaseActions --> Browser
+BaseActions --> Capture
+BaseActions --> Core
+VisionRuntime --> Vision
+VisionRuntime --> Core
+TextActions --> VisionRuntime
+TextActions --> AdvancedSupport
+TextActions --> Core
+ObjectActions --> VisionRuntime
+ObjectActions --> AdvancedSupport
+ObjectActions --> Core
+LocateActions --> TextActions
+LocateActions --> ObjectActions
+Services --> BaseActions
+Services --> LocateActions
+Services --> VisionRuntime
+Resolution --> Services
+
+note bottom of Services
+  ActionServices is the composition root for the
+  action layer. It exposes base, locate, and
+  screenshot-capable services to the runner.
+end note
+
+@enduml

@@ -1,0 +1,116 @@
+@startuml
+title Automation Framework - Vision Pipeline And Extension Points
+
+left to right direction
+skinparam shadowing false
+skinparam componentStyle rectangle
+skinparam packageStyle rectangle
+
+component "ActionVisionRuntime" as ActionVisionRuntime
+component "ReaderUIChecks" as ReaderUIChecks
+
+package "Vision Registry Bundle" {
+  component "VisionRegistryBundle" as Bundle
+  component "DetectorRegistry" as DetectorRegistry
+  component "OCREngineRegistry" as OCREngineRegistry
+  component "ReaderAdapterRegistry" as ReaderAdapterRegistry
+  component "MatcherAdapterRegistry" as MatcherAdapterRegistry
+  component "ComparatorAdapterRegistry" as ComparatorAdapterRegistry
+  component "VisionOperatorRegistry" as VisionOperatorRegistry
+  component "VisionStageRegistry" as VisionStageRegistry
+  component "VisionPlugin" as VisionPlugin
+  component "Plugin Binding Table\n(_PLUGIN_REGISTRY_BINDINGS)" as PluginBindings
+  component "Scoped*Registry\n(namespace + override)" as ScopedRegistries
+}
+
+Bundle *-- DetectorRegistry
+Bundle *-- OCREngineRegistry
+Bundle *-- ReaderAdapterRegistry
+Bundle *-- MatcherAdapterRegistry
+Bundle *-- ComparatorAdapterRegistry
+Bundle *-- VisionOperatorRegistry
+Bundle *-- VisionStageRegistry
+
+VisionPlugin --> PluginBindings : install_vision_plugins()
+PluginBindings --> ScopedRegistries : select scoped target
+ScopedRegistries --> DetectorRegistry : register_detectors()
+ScopedRegistries --> OCREngineRegistry : register_ocr_engines()
+ScopedRegistries --> ReaderAdapterRegistry : register_reader_adapters()
+ScopedRegistries --> MatcherAdapterRegistry : register_matcher_adapters()
+ScopedRegistries --> ComparatorAdapterRegistry : register_comparator_adapters()
+ScopedRegistries --> VisionOperatorRegistry : register_operators()
+ScopedRegistries --> VisionStageRegistry : register_pipeline_stages()
+
+package "Pipeline Runtime" {
+  component "VisionPipelineDetector" as VisionPipelineDetector
+  component "VisionPipeline" as VisionPipeline
+  component "Configured Stage List" as StageList
+  component "VisionStageBuildContext" as StageBuildContext
+  component "VisionPipelineContext" as VisionPipelineContext
+  component "VisionPipelineResult" as VisionPipelineResult
+}
+
+ActionVisionRuntime --> Bundle : create detector / OCR
+ReaderUIChecks --> Bundle : create reader
+Bundle --> VisionPipelineDetector : detector type = pipeline
+
+VisionPipelineDetector *-- VisionPipeline
+VisionPipeline *-- StageList
+VisionPipeline --> VisionPipelineContext
+VisionPipeline --> VisionPipelineResult
+VisionStageRegistry --> StageBuildContext : prepare factories + registry
+StageBuildContext --> StageList : build ordered stages
+
+package "Available Stage Types" {
+  component "DetectorRegionStage" as DetectorRegionStage
+  component "DetectorRefinementStage" as DetectorRefinementStage
+  component "MatcherClassificationStage" as MatcherClassificationStage
+  component "OCRClassificationStage" as OCRClassificationStage
+  component "TextLocateStage" as TextLocateStage
+  component "ReaderClassificationStage" as ReaderClassificationStage
+  component "NodeFilterStage" as NodeFilterStage
+  component "ComparatorFilterStage" as ComparatorFilterStage
+  component "OperatorStage" as OperatorStage
+}
+
+StageList ..> DetectorRegionStage
+StageList ..> DetectorRefinementStage
+StageList ..> MatcherClassificationStage
+StageList ..> OCRClassificationStage
+StageList ..> TextLocateStage
+StageList ..> ReaderClassificationStage
+StageList ..> NodeFilterStage
+StageList ..> ComparatorFilterStage
+StageList ..> OperatorStage
+
+note bottom of StageList
+  A concrete pipeline selects any ordered subset of stages.
+
+  Common built-in flows:
+  - run_object_locate_pipeline():
+    DetectorRegionStage -> NodeFilterStage
+  - run_text_locate_pipeline():
+    TextLocateStage with an optional seed region
+end note
+
+note bottom of VisionPipelineResult
+  VisionPipelineResult keeps:
+  - output VisionNode list
+  - BoundingBox projection
+  - per-stage trace metadata
+end note
+
+note bottom of VisionPipelineDetector
+  Registry-bundle factories are resolved once via
+  _resolve_pipeline_builders().
+  Stage configs are coerced together through
+  _coerce_pipeline_stages().
+end note
+
+note bottom of PluginBindings
+  Plugin installation is now driven by a shared
+  binding table plus scoped registries instead of
+  repeating one registration path per capability.
+end note
+
+@enduml

@@ -1,0 +1,32 @@
+@startuml
+title Automation Framework - Module Call Flow: imaging
+
+skinparam shadowing false
+autonumber
+
+actor "vision adapter" as Caller
+participant "preprocess()" as Preprocess
+participant "to_ndarray()" as ToNdarray
+participant "require_cv2() /\nrequire_numpy() /\nrequire_pillow()" as RequireDeps
+participant "_path_image_cache()" as PathCache
+participant "clip_region()" as ClipRegion
+
+Caller -> Preprocess : preprocess(image, grayscale?, blur_kernel?)
+Preprocess -> ToNdarray : normalize image input
+ToNdarray -> RequireDeps : require_cv2() /\nrequire_numpy()
+
+alt image path input
+  ToNdarray -> PathCache : lookup / populate path cache
+else PIL image input
+  ToNdarray -> RequireDeps : require_pillow()
+else ndarray input
+  ToNdarray -> ToNdarray : copy ndarray
+end
+
+Preprocess --> Caller : normalized image
+
+Caller -> ClipRegion : clip_region(image, region)
+ClipRegion -> ToNdarray : normalize image input
+ClipRegion --> Caller : cropped frame + offset
+
+@enduml

@@ -1,0 +1,33 @@
+@startuml
+title Automation Framework - Module: logs
+
+left to right direction
+skinparam shadowing false
+skinparam componentStyle rectangle
+skinparam packageStyle rectangle
+
+package "logs" {
+  component "interfaces.py\nLogSource" as Interface
+  component "file_log_source.py\nFileLogSource" as FileSource
+  component "command_log_source.py\nCommandLogSource" as CommandSource
+  component "registry.py\ncreate_log_source() /\nregister_log_source()" as Registry
+}
+
+package "Primary Consumers" {
+  component "runner.checks.log_checks /\nrunner.check_dispatcher" as RunnerChecks
+  component "runner.runtime_profile_resolver" as ProfileResolver
+}
+
+Registry --> Interface
+Registry --> FileSource
+Registry --> CommandSource
+RunnerChecks --> Interface : read_text()
+ProfileResolver --> Registry : create_log_source()
+
+note bottom of Registry
+  The logs module keeps log acquisition separate from
+  log validation, so checks only depend on the
+  LogSource contract.
+end note
+
+@enduml

@@ -1,0 +1,31 @@
+@startuml
+title Automation Framework - Module Call Flow: core
+
+skinparam shadowing false
+autonumber
+
+actor "Any Consumer" as Consumer
+participant "BoundingBox(...)" as BoundingBox
+participant "OCRText(...)" as OCRText
+participant "TextLocateSpec(...)" as TextLocate
+participant "ObjectLocateSpec(...)" as ObjectLocate
+participant "TestCase(...)" as TestCase
+participant "FrameworkError /\nActionExecutionError /\nVerificationError" as Exceptions
+
+Consumer -> BoundingBox : construct region value
+Consumer -> OCRText : construct OCR entry
+Consumer -> TextLocate : build text locate payload
+Consumer -> ObjectLocate : build object locate payload
+Consumer -> TestCase : assemble parsed case model
+
+alt runtime failure
+  Consumer -> Exceptions : raise shared framework exception
+end
+
+note over Consumer,Exceptions
+  The core module is mostly passive.
+  It provides shared models and exception types
+  rather than orchestration-heavy call chains.
+end note
+
+@enduml

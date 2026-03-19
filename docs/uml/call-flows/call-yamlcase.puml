@@ -1,0 +1,36 @@
+@startuml
+title Automation Framework - Module Call Flow: yamlcase
+
+skinparam shadowing false
+autonumber
+
+actor "run_tests.py" as Caller
+participant "load_test_case()" as LoadTestCase
+participant "yaml.safe_load()" as YamlLoad
+participant "_ensure_list() /\n_ensure_mapping() /\n_ensure_mapping_of_mappings()" as ShapeGuards
+participant "_validate_stage_items()" as ValidateStageItems
+participant "_normalize_step_name()" as NormalizeStepName
+participant "build_registered_action_args()" as BuildActionArgs
+participant "build_registered_check_args()" as BuildCheckArgs
+participant "TestCase(...)" as TestCase
+
+Caller -> LoadTestCase : load_test_case(path)
+LoadTestCase -> YamlLoad : safe_load(file)
+LoadTestCase -> ShapeGuards : validate emulator /\ndetector /\nreaders /\nlogs /\ncapture
+
+loop setup / steps / verification / teardown
+  LoadTestCase -> ValidateStageItems : validate stage items
+  ValidateStageItems -> NormalizeStepName : normalize action/check name
+  alt action item
+    ValidateStageItems -> BuildActionArgs : validate action args
+  else check item
+    ValidateStageItems -> BuildCheckArgs : validate check args
+  else verification mode
+    ValidateStageItems -> BuildCheckArgs : treat action/check as verification check
+  end
+end
+
+LoadTestCase -> TestCase : build final case model
+LoadTestCase --> Caller : TestCase
+
+@enduml

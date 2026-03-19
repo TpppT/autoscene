@@ -1,0 +1,28 @@
+@startuml
+title Automation Framework - Module Call Flow: logs
+
+skinparam shadowing false
+autonumber
+
+actor "RuntimeProfileResolver /\nLogChecks" as Caller
+participant "register_log_source()" as RegisterLogSource
+participant "create_log_source()" as CreateLogSource
+participant "_LOG_SOURCE_REGISTRY" as Registry
+participant "FileLogSource /\nCommandLogSource" as LogSource
+participant "read_text()" as ReadText
+
+opt custom log source registration
+  Caller -> RegisterLogSource : register_log_source(name, factory)
+  RegisterLogSource -> Registry : store factory by type
+end
+
+Caller -> CreateLogSource : create_log_source(config)
+CreateLogSource -> Registry : resolve source type
+CreateLogSource -> LogSource : instantiate factory(**config)
+CreateLogSource --> Caller : LogSource
+
+Caller -> ReadText : read_text()
+ReadText -> LogSource : file read or command execution
+LogSource --> Caller : log content
+
+@enduml

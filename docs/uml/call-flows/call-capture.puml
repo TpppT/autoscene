@@ -1,0 +1,34 @@
+@startuml
+title Automation Framework - Module Call Flow: capture
+
+skinparam shadowing false
+autonumber
+
+actor "BaseActions /\nRuntimeProfileResolver" as Caller
+participant "WindowCapture.capture_result()" as WindowCapture
+participant "WindowCapture.resolve_capture_region()" as ResolveWindowRegion
+participant "Window backends\n(ImageGrab / MSS)" as WindowBackends
+participant "CaptureResult(...)" as CaptureResult
+participant "create_video_stream_capture()" as CreateVideoCapture
+participant "OpenCVVideoStreamProvider" as FrameProvider
+participant "VideoStreamCapture.capture_result()" as VideoCapture
+participant "VideoStreamCapture.resolve_capture_region()" as ResolveVideoRegion
+
+alt window capture path
+  Caller -> WindowCapture : capture_result(window_title, region)
+  WindowCapture -> ResolveWindowRegion : resolve_capture_region()
+  WindowCapture -> WindowBackends : try capture backend(s)
+  WindowCapture -> CaptureResult : wrap image + artifact + coordinates
+  WindowCapture --> Caller : CaptureResult
+else video stream path
+  Caller -> CreateVideoCapture : create_video_stream_capture(config)
+  CreateVideoCapture -> FrameProvider : OpenCVVideoStreamProvider(...)
+  CreateVideoCapture --> Caller : VideoStreamCapture
+  Caller -> VideoCapture : capture_result(region)
+  VideoCapture -> FrameProvider : read_frame()
+  VideoCapture -> ResolveVideoRegion : resolve_capture_region()
+  VideoCapture -> CaptureResult : build coordinate space + capture result
+  VideoCapture --> Caller : CaptureResult
+end
+
+@enduml

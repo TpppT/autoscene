@@ -1,0 +1,53 @@
+@startuml
+title Automation Framework - Module Call Flow: runner
+
+skinparam shadowing false
+autonumber
+
+actor "run_tests.py" as Caller
+participant "TestExecutor.__init__()" as ExecutorInit
+participant "RuntimeBuilder.compile()" as Compile
+participant "ScenarioPlanCompiler /\nStepCompiler" as PlanCompiler
+participant "RuntimeBuilder.build()" as BuildContext
+participant "RuntimeContextFactory.build()" as ContextFactory
+participant "RuntimeFactoryResolver /\nRuntimeResourceFactory /\nRuntimeServiceFactory" as Assembly
+participant "ScenarioRunnerFactory.create()" as RunnerFactory
+participant "TestExecutor.run()" as ExecutorRun
+participant "ScenarioRunner.run()" as ScenarioRunner
+participant "RunSessionLifecycle" as SessionLifecycle
+participant "ScenarioPipeline.run()" as Pipeline
+participant "StageRunner.run()" as StageRunner
+participant "StepExecutor.execute()" as StepExecutor
+participant "RunnerRetryPolicy.execute()" as RetryPolicy
+participant "StageStepOperation /\nVerificationStepOperation" as StepOperation
+participant "ActionRegistry /\nCheckRegistry" as Registry
+participant "FailurePolicy.handle_step_failure()" as FailurePolicy
+
+Caller -> ExecutorInit : TestExecutor(case, profile, output_dir)
+ExecutorInit -> Compile : compile(case, profile)
+Compile -> PlanCompiler : compile scenario plan
+ExecutorInit -> BuildContext : build(profile, case, output_dir)
+BuildContext -> ContextFactory : build runtime context
+ContextFactory -> Assembly : resolve factories /\nbuild resources /\nbuild services
+ExecutorInit -> RunnerFactory : create(profile, runner?)
+
+Caller -> ExecutorRun : run()
+ExecutorRun -> ScenarioRunner : run(plan, context)
+ScenarioRunner -> SessionLifecycle : start(context)
+ScenarioRunner -> Pipeline : run(plan, context, session)
+Pipeline -> StageRunner : run each stage
+StageRunner -> StepExecutor : execute(step)
+StepExecutor -> RetryPolicy : execute(operation)
+RetryPolicy -> StepOperation : execute typed step
+StepOperation -> Registry : dispatch_step(step)
+
+alt step failure
+  StepExecutor -> FailurePolicy : handle_step_failure(...)
+  FailurePolicy --> StepExecutor : StepResult or re-raise
+end
+
+ScenarioRunner -> SessionLifecycle : finish() / fail()
+ScenarioRunner --> ExecutorRun : RunSession
+ExecutorRun --> Caller : last_session
+
+@enduml
