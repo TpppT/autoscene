@@ -13,19 +13,40 @@ After the latest runtime update, `verification_setup` is now a first-class stage
 ## Overview
 
 - Describe scenarios in YAML instead of writing boilerplate Python for every case
-- Support screenshots from desktop windows and video streams
-- Support core UI actions, OCR-based text location, and object-detection-based location
+- Support screenshots from desktop windows, embedded displays, mobile devices, and video streams
+- Support core UI actions, OCR-based text location, and object-detection-based location when DOM trees are unavailable or controls are custom-drawn
 - Support emulator integration, log validation, and image-based reader validation
 - Support failure artifacts, retries, continue-on-failure behavior, and debug screenshots
 - Support extension points for vision algorithms and runtime plugins
 
+## Demo GIFs
+
+These previews match the example cases below and show the framework in action.
+
+### `examples/datepicker_basic_datetime_case.yaml`
+
+<img src="examples/datepicker_basic_datetime_case.gif" alt="Datepicker basic datetime case demo" width="420" />
+
+### `examples/teststore_chrome_omniparser_case.yaml`
+
+<img src="examples/teststore_chrome_omniparser_case.gif" alt="Teststore Chrome OmniParser case demo" width="420" />
+
+### `examples/outrun_hvac_audio_balance_case.yaml`
+
+<img src="examples/outrun_hvac_audio_balance_case.gif" alt="Outrun HVAC audio balance case demo" width="420" />
+
+### `examples/qt_drive_cluster_gauge.yaml`
+
+<img src="examples/qt_drive_cluster_gauge.gif" alt="Qt drive cluster gauge case demo" width="420" />
+
 ## Good Fit For
 
-- Browser automation
-- Windows desktop application automation
-- Vision-based clicking and dragging of controls
-- External-device event injection with UI validation
-- Cluster, dashboard, or video-scene value recognition
+- Browser and web application automation
+- Desktop, embedded, and mobile UI automation
+- Vision-based clicking, dragging, and control interaction
+- UIs where the DOM tree is unavailable or controls are custom-drawn
+- External-device or system event injection with UI validation
+- Cluster, dashboard, display, or video-scene value recognition
 
 ## Environment
 
@@ -625,26 +646,6 @@ log_sources:
 - `examples/outrun_hvac_audio_balance_case.yaml`: YOLO detection plus drag-to-target interaction, requires `requirements-yolo.txt`
 - `examples/network_device_case.yaml`: external-device event injection
 - `examples/qt_drive_cluster_gauge.yaml`: emulator plus static reader validation
-
-## Demo GIFs
-
-These previews match the example cases above and show the framework in action.
-
-### `examples/datepicker_basic_datetime_case.yaml`
-
-<img src="examples/datepicker_basic_datetime_case.gif" alt="Datepicker basic datetime case demo" width="420" />
-
-### `examples/teststore_chrome_omniparser_case.yaml`
-
-<img src="examples/teststore_chrome_omniparser_case.gif" alt="Teststore Chrome OmniParser case demo" width="420" />
-
-### `examples/outrun_hvac_audio_balance_case.yaml`
-
-<img src="examples/outrun_hvac_audio_balance_case.gif" alt="Outrun HVAC audio balance case demo" width="420" />
-
-### `examples/qt_drive_cluster_gauge.yaml`
-
-<img src="examples/qt_drive_cluster_gauge.gif" alt="Qt drive cluster gauge case demo" width="420" />
 
 ## Extending Vision Algorithms
 
